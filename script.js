@@ -116,8 +116,11 @@ function deleteAlarm(id) {
 function renderAlarms() {
     const container = document.getElementById('alarms-container');
     
+    console.log('渲染闹钟列表，数量:', alarms.length);
+    console.log('闹钟数据:', alarms);
+    
     if (alarms.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #999;">暂无设置的闹钟</p>';
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">暂无设置的闹钟</p>';
         return;
     }
     
@@ -138,17 +141,23 @@ function renderAlarms() {
 function loadAlarms() {
     const saved = localStorage.getItem('webAlarms');
     if (saved) {
-        alarms = JSON.parse(saved);
-        // 过滤掉已过期且不重复的闹钟
-        const now = new Date();
-        alarms = alarms.filter(alarm => {
-            if (alarm.repeat === 'once') {
-                const alarmTime = new Date(`${alarm.date}T${alarm.time}`);
-                return alarmTime > now;
-            }
-            return true;
-        });
-        saveAlarms();
+        try {
+            alarms = JSON.parse(saved);
+            // 过滤掉已过期且不重复的闹钟
+            const now = new Date();
+            alarms = alarms.filter(alarm => {
+                if (alarm.repeat === 'once') {
+                    const alarmTime = new Date(`${alarm.date}T${alarm.time}`);
+                    return alarmTime > now;
+                }
+                return true;
+            });
+            saveAlarms();
+            console.log('加载闹钟数据成功:', alarms);
+        } catch (error) {
+            console.error('加载闹钟数据失败:', error);
+            alarms = [];
+        }
     }
     renderAlarms();
 }
@@ -160,6 +169,11 @@ function saveAlarms() {
 
 // 初始化日历
 function initCalendar() {
+    if (typeof FullCalendar === 'undefined') {
+        console.error('FullCalendar is not loaded');
+        return;
+    }
+    
     const calendarEl = document.getElementById('calendar');
     
     calendar = new FullCalendar.Calendar(calendarEl, {
@@ -183,6 +197,7 @@ function initCalendar() {
     });
     
     calendar.render();
+    console.log('日历初始化成功');
 }
 
 // 获取日历事件
@@ -195,10 +210,10 @@ function getCalendarEvents() {
             id: alarm.id,
             title: alarm.title,
             start: `${alarm.date}T${alarm.time}`,
-            end: endDate.toISOString().slice(0, 16),
-            backgroundColor: '#4a90e2',
-            borderColor: '#4a90e2',
-            allDay: false
+            end: endDate.toISOString(),
+            allDay: false,
+            backgroundColor: '#ff4444',
+            borderColor: '#ff4444'
         };
     });
 }
@@ -207,7 +222,9 @@ function getCalendarEvents() {
 function updateCalendar() {
     if (calendar) {
         calendar.removeAllEvents();
-        calendar.addEventSource(getCalendarEvents());
+        const events = getCalendarEvents();
+        console.log('更新日历事件:', events);
+        calendar.addEventSource(events);
     }
 }
 
@@ -287,43 +304,30 @@ function triggerAlarm(alarm) {
 function playAlarmSound() {
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // 创建振荡器
         const oscillator = audioContext.createOscillator();
-        oscillator.type = 'square'; // 方波，声音比较尖锐
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 频率
-        
-        // 创建增益节点控制音量
         const gainNode = audioContext.createGain();
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime); // 初始音量
         
-        // 连接节点
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         
-        // 开始播放
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 设置频率
+        oscillator.type = 'square'; // 方波
+        
+        // 渐强渐弱效果
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.5);
+        gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 2);
+        
         oscillator.start(audioContext.currentTime);
         
-        // 循环播放：停止后立即重新开始
-        const playInterval = setInterval(() => {
-            if (!currentAlarm) {
-                clearInterval(playInterval);
-                oscillator.stop();
-                return;
-            }
-            
-            oscillator.stop(audioContext.currentTime);
-            oscillator.start(audioContext.currentTime + 0.1);
-        }, 1000);
-        
         // 保存引用以便停止
-        currentAlarm.oscillator = oscillator;
         currentAlarm.audioContext = audioContext;
-        currentAlarm.playInterval = playInterval;
+        currentAlarm.oscillator = oscillator;
+        currentAlarm.gainNode = gainNode;
         
     } catch (error) {
-        console.log('无法播放音频:', error);
-        // 如果Web Audio API失败，尝试语音提醒
+        console.error('Web Audio API播放失败:', error);
+        // 如果Web Audio也失败，尝试语音合成
         speakAlarm(currentAlarm.title);
     }
 }

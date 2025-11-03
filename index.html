@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web闹钟</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/main.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/main.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/zh-cn.min.js"></script>
+    <link href="https://cdn.bootcdn.net/ajax/libs/fullcalendar/6.1.8/main.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/fullcalendar/6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/fullcalendar/6.1.8/locales/zh-cn.min.js"></script>
 </head>
 <body>
     <!-- 悬浮球按钮 -->
@@ -94,9 +94,7 @@
         </div>
     </div>
 
-    <audio id="alarm-sound" src="alarm.mp3" loop>
-        您的浏览器不支持音频元素。
-    </audio>
+    <!-- 移除对alarm.mp3的引用，将在script.js中使用Web Audio API生成音频 -->
 
     <script src="script.js"></script>
 </body>

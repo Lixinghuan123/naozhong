@@ -40,13 +40,33 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="alarm-repeat">重复周期:</label>
-                    <select id="alarm-repeat">
-                        <option value="once">不重复</option>
-                        <option value="minutes">每隔几分钟</option>
-                        <option value="hours">每隔几小时</option>
-                        <option value="days">每隔几天</option>
-                    </select>
+                    <label>重复周期:</label>
+                    <div class="repeat-options">
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="once" checked>
+                            <span>不重复</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="minutes">
+                            <span>分钟</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="hours">
+                            <span>小时</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="days">
+                            <span>天</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="weeks">
+                            <span>星期</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="months">
+                            <span>月</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-group repeat-interval hidden" id="repeat-interval">

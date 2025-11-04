@@ -5,35 +5,38 @@ let checkInterval = null;
 let calendar = null;
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
-    // 初始化闹钟列表
-    loadAlarms();
-    
-    // 初始化日历
-    initCalendar();
-    
-    // 设置重复周期选择事件
-    document.getElementById('alarm-repeat').addEventListener('change', function() {
-        toggleRepeatInterval();
-    });
-    
-    // 设置表单提交事件
-    document.getElementById('alarm-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        addAlarm();
-    });
-    
-    // 设置对话框按钮事件
-    document.getElementById('stop-btn').addEventListener('click', stopAlarm);
-    document.getElementById('snooze-btn').addEventListener('click', snoozeAlarm);
-    
-    // 开始检查闹钟
-    startAlarmCheck();
-    
-    // 设置今天的日期为默认值
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('alarm-date').value = today;
-});
+ document.addEventListener('DOMContentLoaded', function() {
+     // 初始化闹钟列表
+     loadAlarms();
+     
+     // 初始化日历
+     initCalendar();
+     
+     // 设置重复周期选择事件
+     const repeatRadios = document.querySelectorAll('input[name="alarm-repeat"]');
+     repeatRadios.forEach(radio => {
+         radio.addEventListener('change', function() {
+             toggleRepeatInterval();
+         });
+     });
+     
+     // 设置表单提交事件
+     document.getElementById('alarm-form').addEventListener('submit', function(e) {
+         e.preventDefault();
+         addAlarm();
+     });
+     
+     // 开始检查闹钟
+     startAlarmCheck();
+     
+     // 设置今天的日期为默认值
+     const today = new Date().toISOString().split('T')[0];
+     document.getElementById('alarm-date').value = today;
+     
+     // 设置对话框按钮事件
+     document.getElementById('stop-btn').addEventListener('click', stopAlarm);
+     document.getElementById('snooze-btn').addEventListener('click', snoozeAlarm);
+ });
 
 // 切换闹钟面板显示
 function toggleAlarmPanel() {
@@ -55,7 +58,7 @@ function toggleCalendarPanel() {
 
 // 切换重复间隔输入框显示
 function toggleRepeatInterval() {
-    const repeatType = document.getElementById('alarm-repeat').value;
+    const repeatType = document.querySelector('input[name="alarm-repeat"]:checked').value;
     const intervalDiv = document.getElementById('repeat-interval');
     
     if (repeatType === 'once') {
@@ -70,7 +73,7 @@ function addAlarm() {
     const title = document.getElementById('alarm-title').value;
     const date = document.getElementById('alarm-date').value;
     const time = document.getElementById('alarm-time').value;
-    const repeat = document.getElementById('alarm-repeat').value;
+    const repeat = document.querySelector('input[name="alarm-repeat"]:checked').value;
     const action = document.getElementById('alarm-action').value;
     
     let interval = 0;
@@ -98,6 +101,8 @@ function addAlarm() {
     document.getElementById('alarm-form').reset();
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('alarm-date').value = today;
+    // 重置单选按钮为"不重复"
+    document.querySelector('input[name="alarm-repeat"][value="once"]').checked = true;
     toggleRepeatInterval();
     
     showNotification('闹钟已设置', `将在 ${date} ${time} 提醒`);
@@ -272,6 +277,24 @@ function checkAlarms() {
                 now.getMinutes() === alarmDateTime.getMinutes()) {
                 triggerAlarm(alarm);
             }
+        } else if (alarm.repeat === 'weeks') {
+            const weeksDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24 * 7));
+            if (weeksDiff % alarm.interval === 0 && 
+                now.getDay() === alarmDateTime.getDay() && 
+                now.getHours() === alarmDateTime.getHours() && 
+                now.getMinutes() === alarmDateTime.getMinutes()) {
+                triggerAlarm(alarm);
+            }
+        } else if (alarm.repeat === 'months') {
+            // 大致的月间隔检查，不考虑每月天数差异
+            const monthsDiff = (now.getFullYear() - alarmDateTime.getFullYear()) * 12 + 
+                              (now.getMonth() - alarmDateTime.getMonth());
+            if (monthsDiff % alarm.interval === 0 && 
+                now.getDate() === alarmDateTime.getDate() && 
+                now.getHours() === alarmDateTime.getHours() && 
+                now.getMinutes() === alarmDateTime.getMinutes()) {
+                triggerAlarm(alarm);
+            }
         }
     });
 }
@@ -388,7 +411,6 @@ function flashTitleBar() {
 function stopAlarm() {
     // 停止音频（Web Audio API）
     if (currentAlarm && currentAlarm.oscillator) {
-        clearInterval(currentAlarm.playInterval);
         currentAlarm.oscillator.stop();
         currentAlarm.audioContext.close();
     }
@@ -414,6 +436,8 @@ function stopAlarm() {
 
 // 稍后提醒（5分钟后）
 function snoozeAlarm() {
+    // 在停止闹钟之前保存当前闹钟的副本
+    const alarmToSnooze = currentAlarm;
     stopAlarm();
     
     // 创建新的闹钟，5分钟后提醒
@@ -422,12 +446,12 @@ function snoozeAlarm() {
     
     const snoozeAlarm = {
         id: Date.now(),
-        title: `稍后提醒：${currentAlarm.title}`,
+        title: `稍后提醒：${alarmToSnooze.title}`,
         date: now.toISOString().split('T')[0],
         time: now.toTimeString().slice(0, 5),
         repeat: 'once',
         interval: 0,
-        action: currentAlarm.action,
+        action: alarmToSnooze.action,
         enabled: true
     };
     

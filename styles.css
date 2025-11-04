@@ -121,6 +121,26 @@ body {
     display: none !important;
 }
 
+.repeat-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.radio-option input[type="radio"] {
+    accent-color: #4a90e2;
+    transform: scale(1.2);
+}
+
 .save-btn {
     width: 100%;
     padding: 14px;

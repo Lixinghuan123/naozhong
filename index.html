@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web闹钟</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdn.bootcdn.net/ajax/libs/fullcalendar/6.1.8/main.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/fullcalendar/6.1.8/index.global.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/fullcalendar/6.1.8/locales/zh-cn.min.js"></script>
+</head>
+<body>
+    <!-- 悬浮球按钮 -->
+    <div id="floating-btn" class="floating-btn" onclick="toggleAlarmPanel()">
+        ⏰
+    </div>
+
+    <!-- 闹钟面板 -->
+    <div id="alarm-panel" class="alarm-panel hidden">
+        <div class="panel-header">
+            <h2>设置闹钟</h2>
+            <button class="close-btn" onclick="toggleAlarmPanel()">×</button>
+        </div>
+        
+        <div class="panel-content">
+            <form id="alarm-form">
+                <div class="form-group">
+                    <label for="alarm-title">闹钟标题 (最多200字):</label>
+                    <input type="text" id="alarm-title" maxlength="200" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="alarm-date">选择日期:</label>
+                    <input type="date" id="alarm-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="alarm-time">选择时间:</label>
+                    <input type="time" id="alarm-time" required>
+                </div>
+
+                <div class="form-group">
+                    <label>重复周期:</label>
+                    <div class="repeat-options">
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="once" checked>
+                            <span>不重复</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="minutes">
+                            <span>分钟</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="hours">
+                            <span>小时</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="days">
+                            <span>天</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="weeks">
+                            <span>星期</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="alarm-repeat" value="months">
+                            <span>月</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group repeat-interval hidden" id="repeat-interval">
+                    <label for="interval-value">间隔值:</label>
+                    <input type="number" id="interval-value" min="1" value="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="alarm-action">提醒方式:</label>
+                    <select id="alarm-action">
+                        <option value="ring">响铃</option>
+                        <option value="vibrate">震动</option>
+                        <option value="speech">语音提醒</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="save-btn">保存闹钟</button>
+            </form>
+
+            <div class="alarm-list">
+                <h3>已设置的闹钟</h3>
+                <div id="alarms-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日历面板 -->
+    <div id="calendar-panel" class="calendar-panel hidden">
+        <div class="panel-header">
+            <h2>日历视图</h2>
+            <button class="close-btn" onclick="toggleCalendarPanel()">×</button>
+        </div>
+        <div id="calendar"></div>
+    </div>
+
+    <!-- 提醒对话框 -->
+    <div id="alarm-dialog" class="alarm-dialog hidden">
+        <div class="dialog-content">
+            <h2 id="dialog-title">闹钟提醒</h2>
+            <p id="dialog-message"></p>
+            <div class="dialog-buttons">
+                <button id="snooze-btn" class="snooze-btn">稍后提醒</button>
+                <button id="stop-btn" class="stop-btn">停止闹钟</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移除对alarm.mp3的引用，将在script.js中使用Web Audio API生成音频 -->
+
+    <script src="script.js"></script>
+</body>
+</html>

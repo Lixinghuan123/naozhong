@@ -39,7 +39,7 @@ body {
 }
 
 /* 面板通用样式 */
-.alarm-panel, .calendar-panel {
+.alarm-panel {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -50,6 +50,23 @@ body {
     width: 90%;
     max-width: 500px;
     max-height: 80vh;
+    overflow-y: auto;
+    z-index: 1001;
+    transition: all 0.3s ease;
+}
+
+/* 日历面板样式 */
+.calendar-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    width: 95%;
+    max-width: 1200px;
+    max-height: 90vh;
     overflow-y: auto;
     z-index: 1001;
     transition: all 0.3s ease;

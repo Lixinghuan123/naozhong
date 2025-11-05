@@ -165,6 +165,7 @@ function loadAlarms() {
         }
     }
     renderAlarms();
+    updateCalendar();
 }
 
 // 保存闹钟数据

@@ -409,6 +409,9 @@ function flashTitleBar() {
 
 // 停止闹钟
 function stopAlarm() {
+    // 在停止闹钟之前保存当前闹钟的副本
+    const alarmToStop = currentAlarm;
+    
     // 停止音频（Web Audio API）
     if (currentAlarm && currentAlarm.oscillator) {
         currentAlarm.oscillator.stop();
@@ -431,26 +434,52 @@ function stopAlarm() {
     // 恢复标题
     document.title = 'Web闹钟';
     
+    // 根据重复间隔决定是否再次提醒
+    if (alarmToStop) {
+        // 如果重复间隔大于5分钟，按照重复间隔再次提醒
+        if (alarmToStop.repeat !== 'once' && alarmToStop.interval > 5) {
+            // 不需要重新创建闹钟，原闹钟会继续重复
+            showNotification('闹钟已暂停', `将在${alarmToStop.interval}${alarmToStop.repeat === 'minutes' ? '分钟' : 
+                                          alarmToStop.repeat === 'hours' ? '小时' : 
+                                          alarmToStop.repeat === 'days' ? '天' : 
+                                          alarmToStop.repeat === 'weeks' ? '周' : '月'}后再次提醒`);
+        } else {
+            // 彻底关闭闹钟，从列表中移除
+            deleteAlarm(alarmToStop.id);
+            showNotification('闹钟已关闭', '该闹钟已彻底关闭');
+        }
+    }
+    
     currentAlarm = null;
 }
 
-// 稍后提醒（5分钟后）
+// 稍后提醒
 function snoozeAlarm() {
     // 在停止闹钟之前保存当前闹钟的副本
     const alarmToSnooze = currentAlarm;
     stopAlarm();
     
-    // 创建新的闹钟，5分钟后提醒
+    // 创建新的闹钟，按照原重复间隔或默认5分钟提醒
     const now = new Date();
-    now.setMinutes(now.getMinutes() + 5);
+    let snoozeInterval = 5;
+    let snoozeRepeat = 'once';
+    
+    // 如果原闹钟有重复间隔且大于0，保持原重复设置
+    if (alarmToSnooze.repeat !== 'once' && alarmToSnooze.interval > 0) {
+        snoozeInterval = alarmToSnooze.interval;
+        snoozeRepeat = alarmToSnooze.repeat;
+    }
+    
+    // 计算新的提醒时间
+    const newAlarmTime = new Date(now.getTime() + snoozeInterval * 60000);
     
     const snoozeAlarm = {
         id: Date.now(),
         title: `稍后提醒：${alarmToSnooze.title}`,
-        date: now.toISOString().split('T')[0],
-        time: now.toTimeString().slice(0, 5),
-        repeat: 'once',
-        interval: 0,
+        date: newAlarmTime.toISOString().split('T')[0],
+        time: newAlarmTime.toTimeString().slice(0, 5),
+        repeat: snoozeRepeat,
+        interval: snoozeRepeat !== 'once' ? snoozeInterval : 0,
         action: alarmToSnooze.action,
         enabled: true
     };
@@ -460,7 +489,7 @@ function snoozeAlarm() {
     renderAlarms();
     updateCalendar();
     
-    showNotification('稍后提醒已设置', '将在5分钟后再次提醒');
+    showNotification('稍后提醒已设置', `将在${snoozeInterval}分钟后再次提醒`);
 }
 
 // 显示通知

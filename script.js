@@ -54,6 +54,12 @@ function toggleCalendarPanel() {
     
     calendarPanel.classList.toggle('hidden');
     panel.classList.add('hidden');
+    
+    // 如果日历面板现在是显示状态，并且日历已经初始化
+    if (!calendarPanel.classList.contains('hidden') && calendar) {
+        // 手动触发日历尺寸调整
+        calendar.updateSize();
+    }
 }
 
 // 切换重复间隔输入框显示
@@ -203,6 +209,8 @@ function initCalendar() {
     });
     
     calendar.render();
+    // 手动触发日历尺寸调整，确保初始尺寸正确
+    calendar.updateSize();
     console.log('日历初始化成功');
 }
 

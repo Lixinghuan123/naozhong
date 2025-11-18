@@ -11,6 +11,19 @@ body {
     line-height: 1.6;
 }
 
+/* 主页面闹钟列表 */
+.main-alarm-list {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+.main-alarm-list h2 {
+    color: #4a90e2;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
 /* 悬浮球按钮 */
 .floating-btn {
     position: fixed;

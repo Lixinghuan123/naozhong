@@ -82,6 +82,14 @@ function addAlarm() {
     const repeat = document.querySelector('input[name="alarm-repeat"]:checked').value;
     const action = document.getElementById('alarm-action').value;
     
+    // 检验设置时间是否晚于当前时间
+    const now = new Date();
+    const alarmTime = new Date(`${date}T${time}`);
+    if (alarmTime <= now) {
+        alert('设置的时间必须晚于当前时间');
+        return;
+    }
+    
     let interval = 0;
     if (repeat !== 'once') {
         interval = parseInt(document.getElementById('interval-value').value);
@@ -264,45 +272,59 @@ function checkAlarms() {
         const alarmDateTime = new Date(`${alarm.date}T${alarm.time}`);
         const timeDiff = Math.abs(now - alarmDateTime);
         const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+        const secondsDiff = Math.floor(timeDiff / 1000);
         
         // 检查是否到了提醒时间
         if (alarm.repeat === 'once') {
-            if (currentDate === alarm.date && currentTime === alarm.time) {
+            // 只在精确到秒且时间差小于10秒时触发，避免重复触发
+            if (currentDate === alarm.date && currentTime === alarm.time && secondsDiff < 10) {
                 triggerAlarm(alarm);
             }
         } else if (alarm.repeat === 'minutes') {
-            if (minutesDiff % alarm.interval === 0 && minutesDiff < 60) {
+            // 确保只在每分钟的特定时间点触发一次
+            if (now.getSeconds() < 10 && minutesDiff % alarm.interval === 0) {
                 triggerAlarm(alarm);
             }
         } else if (alarm.repeat === 'hours') {
-            const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
-            if (hoursDiff % alarm.interval === 0 && now.getMinutes() === alarmDateTime.getMinutes()) {
-                triggerAlarm(alarm);
+            // 确保只在每小时的特定分钟和前10秒内触发一次
+            if (now.getSeconds() < 10 && now.getMinutes() === alarmDateTime.getMinutes()) {
+                const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
+                if (hoursDiff % alarm.interval === 0) {
+                    triggerAlarm(alarm);
+                }
             }
         } else if (alarm.repeat === 'days') {
-            const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-            if (daysDiff % alarm.interval === 0 && 
+            // 确保只在每天的特定时分和前10秒内触发一次
+            if (now.getSeconds() < 10 && 
                 now.getHours() === alarmDateTime.getHours() && 
                 now.getMinutes() === alarmDateTime.getMinutes()) {
-                triggerAlarm(alarm);
+                const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                if (daysDiff % alarm.interval === 0) {
+                    triggerAlarm(alarm);
+                }
             }
         } else if (alarm.repeat === 'weeks') {
-            const weeksDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24 * 7));
-            if (weeksDiff % alarm.interval === 0 && 
+            // 确保只在每周的特定天时分和前10秒内触发一次
+            if (now.getSeconds() < 10 && 
                 now.getDay() === alarmDateTime.getDay() && 
                 now.getHours() === alarmDateTime.getHours() && 
                 now.getMinutes() === alarmDateTime.getMinutes()) {
-                triggerAlarm(alarm);
+                const weeksDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24 * 7));
+                if (weeksDiff % alarm.interval === 0) {
+                    triggerAlarm(alarm);
+                }
             }
         } else if (alarm.repeat === 'months') {
-            // 大致的月间隔检查，不考虑每月天数差异
-            const monthsDiff = (now.getFullYear() - alarmDateTime.getFullYear()) * 12 + 
-                              (now.getMonth() - alarmDateTime.getMonth());
-            if (monthsDiff % alarm.interval === 0 && 
+            // 确保只在每月的特定日期时分和前10秒内触发一次
+            if (now.getSeconds() < 10 && 
                 now.getDate() === alarmDateTime.getDate() && 
                 now.getHours() === alarmDateTime.getHours() && 
                 now.getMinutes() === alarmDateTime.getMinutes()) {
-                triggerAlarm(alarm);
+                const monthsDiff = (now.getFullYear() - alarmDateTime.getFullYear()) * 12 + 
+                                  (now.getMonth() - alarmDateTime.getMonth());
+                if (monthsDiff % alarm.interval === 0) {
+                    triggerAlarm(alarm);
+                }
             }
         }
     });
@@ -417,7 +439,7 @@ function flashTitleBar() {
 }
 
 // 停止闹钟
-function stopAlarm() {
+function stopAlarm(showNotificationFlag = true) {
     // 在停止闹钟之前保存当前闹钟的副本
     const alarmToStop = currentAlarm;
     
@@ -425,6 +447,10 @@ function stopAlarm() {
     if (currentAlarm && currentAlarm.oscillator) {
         currentAlarm.oscillator.stop();
         currentAlarm.audioContext.close();
+        // 清除引用防止内存泄漏和意外播放
+        delete currentAlarm.audioContext;
+        delete currentAlarm.oscillator;
+        delete currentAlarm.gainNode;
     }
     
     // 停止震动
@@ -443,19 +469,23 @@ function stopAlarm() {
     // 恢复标题
     document.title = 'Web闹钟';
     
-    // 根据重复间隔决定是否再次提醒
-    if (alarmToStop) {
-        // 如果重复间隔大于5分钟，按照重复间隔再次提醒
-        if (alarmToStop.repeat !== 'once' && alarmToStop.interval > 5) {
-            // 不需要重新创建闹钟，原闹钟会继续重复
+    // 处理不重复闹钟的情况
+    if (alarmToStop && alarmToStop.repeat === 'once') {
+        // 只有在点击停止按钮时才删除原闹钟，稍后提醒时不删除
+        if (showNotificationFlag) {
+            deleteAlarm(alarmToStop.id);
+            showNotification('闹钟已关闭', '该闹钟已彻底关闭');
+        } 
+        // 稍后提醒时由snoozeAlarm处理新闹钟的创建
+    } 
+    // 处理重复闹钟的情况
+    else if (alarmToStop) {
+        // 如果是点击停止按钮，显示通知
+        if (showNotificationFlag) {
             showNotification('闹钟已暂停', `将在${alarmToStop.interval}${alarmToStop.repeat === 'minutes' ? '分钟' : 
                                           alarmToStop.repeat === 'hours' ? '小时' : 
                                           alarmToStop.repeat === 'days' ? '天' : 
                                           alarmToStop.repeat === 'weeks' ? '周' : '月'}后再次提醒`);
-        } else {
-            // 彻底关闭闹钟，从列表中移除
-            deleteAlarm(alarmToStop.id);
-            showNotification('闹钟已关闭', '该闹钟已彻底关闭');
         }
     }
     
@@ -464,32 +494,38 @@ function stopAlarm() {
 
 // 稍后提醒
 function snoozeAlarm() {
-    // 在停止闹钟之前保存当前闹钟的副本
-    const alarmToSnooze = currentAlarm;
-    stopAlarm();
+    if (!currentAlarm) return;
+    
+    // 停止当前闹钟但不显示通知
+    stopAlarm(false);
     
     // 创建新的闹钟，按照原重复间隔或默认5分钟提醒
     const now = new Date();
     let snoozeInterval = 5;
     let snoozeRepeat = 'once';
     
-    // 如果原闹钟有重复间隔且大于0，保持原重复设置
-    if (alarmToSnooze.repeat !== 'once' && alarmToSnooze.interval > 0) {
-        snoozeInterval = alarmToSnooze.interval;
-        snoozeRepeat = alarmToSnooze.repeat;
+    // 如果原闹钟有重复且间隔大于5分钟，按照原间隔再次提醒
+    if (currentAlarm.repeat !== 'once' && currentAlarm.interval > 5) {
+        snoozeInterval = currentAlarm.interval;
+        snoozeRepeat = currentAlarm.repeat;
+    } 
+    // 如果是重复但间隔小于等于5分钟，或者不重复，都设置为5分钟后提醒且不重复
+    else {
+        snoozeInterval = 5;
+        snoozeRepeat = 'once';
     }
     
-    // 计算新的提醒时间
-    const newAlarmTime = new Date(now.getTime() + snoozeInterval * 60000);
+    // 计算新的提醒时间，增加10秒偏移量避免立即触发
+    const newAlarmTime = new Date(now.getTime() + (snoozeInterval * 60000) + 10000);
     
     const snoozeAlarm = {
         id: Date.now(),
-        title: `稍后提醒：${alarmToSnooze.title}`,
+        title: currentAlarm.title, // 不增加标题字段
         date: newAlarmTime.toISOString().split('T')[0],
         time: newAlarmTime.toTimeString().slice(0, 5),
         repeat: snoozeRepeat,
         interval: snoozeRepeat !== 'once' ? snoozeInterval : 0,
-        action: alarmToSnooze.action,
+        action: currentAlarm.action,
         enabled: true
     };
     
@@ -498,11 +534,20 @@ function snoozeAlarm() {
     renderAlarms();
     updateCalendar();
     
-    showNotification('稍后提醒已设置', `将在${snoozeInterval}分钟后再次提醒`);
+    // 只显示一个通知
+    if (!Notification || Notification.permission === 'granted') {
+        showNotification('稍后提醒已设置', `将在${snoozeInterval}分钟后再次提醒`);
+    }
 }
 
 // 显示通知
 function showNotification(title, message) {
+    // 检查是否已经显示过通知（避免重复）
+    if (window.lastNotificationTime && (Date.now() - window.lastNotificationTime < 500)) {
+        return;
+    }
+    window.lastNotificationTime = Date.now();
+    
     if (!('Notification' in window)) {
         alert(message);
         return;
@@ -511,11 +556,8 @@ function showNotification(title, message) {
     if (Notification.permission === 'granted') {
         new Notification(title, { body: message, icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij4KICA8cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnoiIGZpbGw9IiM0YTkwZTIiLz4KICA8cGF0aCBkPSJNMTIgMThjLTIuMjEgMC00LTEuNzktNC00czEuNzktNCA0LTRzNCAxLjc5IDQgNHMtMS43OSA0LTQgNHoiIGZpbGw9IiM0YTkwZTIiLz4KICA8cGF0aCBkPSJNMTIgMTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxem0wLTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxem0tMyA3Yy41NSAwIDEtLjQ1IDEtMXMtLjQ1LTEtMS0xLT EgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxCiAgICAgICAgbTAgLTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxem02IDdjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxCiAgICAgICAgbTAgLTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxIiAvPgo8L3N2Zz4K' });
     } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                new Notification(title, { body: message, icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij4KICA8cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnoiIGZpbGw9IiM0YTkwZTIiLz4KICA8cGF0aCBkPSJNMTIgMThjLTIuMjEgMC00LTEuNzktNC00czEuNzktNCA0LTRzNCAxLjc5IDQgNHMtMS43OSA0LTQgNHoiIGZpbGw9IiM0YTkwZTIiLz4KICA8cGF0aCBkPSJNMTIgMTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxem0wLTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxem0tMyA3Yy41NSAwIDEtLjQ1IDEtMXMtLjQ1LTEtMS0xLT EgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxCiAgICAgICAgbTAgLTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxem02IDdjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxCiAgICAgICAgbTAgLTRjLjU1IDAgMS0uNDUgMS0xcy0uNDUtMS0xLTFzLTEgLjQ1LTEgMWMuMDAgLjU1LjQ1IDEgMSAxIiAvPgo8L3N2Zz4K' });
-            }
-        });
+        // 只请求权限，不显示额外通知
+        Notification.requestPermission();
     }
 }
 
